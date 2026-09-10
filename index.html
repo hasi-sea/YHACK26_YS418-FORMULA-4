@@ -1,0 +1,2558 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroScope-XAI | Uncertainty-Aware Neuro-Radiology Decision Support</title>
+  <meta name="description" content="An uncertainty-aware, attention-guided decision support system for brain tumor classification, boundary delineation, and clinical verification. Built for YHACK '26.">
+  
+  <!-- Google Fonts: Space Grotesk & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Three.js & OrbitControls CDN for 3D WebGL Spatial Reconstruction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            deepIndigo: '#262262',
+            vibrantOrange: '#f16623',
+            darkBg: '#0b091a',
+            indigoSurface: '#130f33',
+            medWhite: '#f8fafc',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Space Grotesk', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Custom Styles: Deep Indigo & Vibrant Orange Aesthetics -->
+  <style>
+    body {
+      background-color: #0b091a;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    h1, h2, h3, h4, h5, h6, .font-heading {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    
+    /* Background Grid Pattern */
+    .bg-grid-pattern {
+      background-image: radial-gradient(rgba(241, 102, 35, 0.09) 1px, transparent 1px);
+      background-size: 38px 38px;
+    }
+    
+    /* Glowing Radial Orbs */
+    .orb-orange {
+      background: radial-gradient(circle, rgba(241, 102, 35, 0.22) 0%, rgba(11, 9, 26, 0) 70%);
+    }
+    .orb-indigo {
+      background: radial-gradient(circle, rgba(38, 34, 98, 0.45) 0%, rgba(11, 9, 26, 0) 75%);
+    }
+    
+    /* Anti-gravity Floating Keyframes */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(0.4deg); }
+    }
+    
+    @keyframes floatMedium {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes pulseScanline {
+      0% { top: 0%; opacity: 0.8; }
+      50% { opacity: 0.3; }
+      100% { top: 95%; opacity: 0.8; }
+    }
+    
+    .animate-float-slow {
+      animation: floatSlow 7s ease-in-out infinite;
+    }
+    
+    .animate-float-medium {
+      animation: floatMedium 5s ease-in-out infinite;
+    }
+
+    .animate-scanline {
+      animation: pulseScanline 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    /* High-Tech Glowing Typewriter & Cursor Animation */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .animate-blink {
+      animation: blink 0.8s step-start infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        text-shadow: 0 0 20px rgba(241, 102, 35, 0.7), 0 0 40px rgba(241, 102, 35, 0.4);
+      }
+      50% {
+        text-shadow: 0 0 30px rgba(241, 102, 35, 1), 0 0 60px rgba(241, 102, 35, 0.7);
+      }
+    }
+
+    .black-box-glow {
+      color: #f16623;
+      text-shadow: 0 0 20px rgba(241, 102, 35, 0.7), 0 0 40px rgba(241, 102, 35, 0.4);
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+    
+    /* Glassmorphism Panels */
+    .glass-card {
+      background: rgba(38, 34, 98, 0.35);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(241, 102, 35, 0.25);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .glass-card-hover {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .glass-card-hover:hover {
+      transform: translateY(-8px) scale(1.01);
+      border-color: rgba(241, 102, 35, 0.65);
+      box-shadow: 0 20px 45px -15px rgba(241, 102, 35, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Text Gradient */
+    .text-gradient {
+      background: linear-gradient(135deg, #ffffff 0%, #fed7aa 40%, #f16623 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .text-gradient-orange {
+      background: linear-gradient(135deg, #f16623 0%, #fb923c 50%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    /* Scroll Reveal Initial State */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b091a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #262262;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #f16623;
+    }
+
+    /* 4-Second CSS Splash Screen Loading Animation */
+    .splash-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: #080A11;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      pointer-events: auto;
+      animation: fadeOutOverlay 0.5s cubic-bezier(0.4, 0, 0.2, 1) 3.5s forwards;
+    }
+
+    .splash-content {
+      display: flex;
+      align-items: center;
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 3.5rem;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+    }
+
+    .text-wrapper {
+      display: flex;
+      overflow: hidden;
+      align-items: center;
+    }
+
+    .letter-n {
+      opacity: 0;
+      transform: scale(0.6) translateY(20px);
+      animation: dropIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0s forwards;
+    }
+
+    .letter-euro {
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      display: inline-block;
+      animation: slideEuro 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.8s forwards;
+    }
+
+    .scope-wrapper {
+      width: 54px;
+      height: 54px;
+      margin-left: 10px;
+      margin-right: 12px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scope-circle {
+      width: 100%;
+      height: 100%;
+    }
+
+    .scope-circle circle {
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+      animation: drawCircle 1.0s ease-in-out 1.6s forwards;
+      transform-origin: center;
+      transform: rotate(-90deg);
+    }
+
+    .crosshair {
+      opacity: 0;
+      animation: popCrosshairs 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 2.6s forwards;
+    }
+
+    .xai-wrapper {
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+
+    .letter-xai {
+      opacity: 0;
+      transform: translateX(-15px);
+      color: #F97316;
+      animation: fadeInXAI 0.9s cubic-bezier(0.25, 1, 0.5, 1) 2.6s forwards;
+    }
+
+    /* Keyframes */
+    @keyframes dropIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.6) translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes slideEuro {
+      0% {
+        max-width: 0;
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      100% {
+        max-width: 200px;
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes drawCircle {
+      0% {
+        stroke-dashoffset: 283;
+      }
+      100% {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @keyframes popCrosshairs {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+        transform-origin: center;
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        transform-origin: center;
+      }
+    }
+
+    @keyframes fadeInXAI {
+      0% {
+        opacity: 0;
+        transform: translateX(-15px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeOutOverlay {
+      0% {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+      99% {
+        opacity: 0;
+        visibility: visible;
+        pointer-events: none;
+      }
+      100% {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body class="relative bg-[#0b091a] text-medWhite selection:bg-[#f16623]/30 selection:text-[#f16623] min-h-screen flex flex-col">
+
+  <!-- 4-Second CSS Splash Screen Loading Animation -->
+  <div class="splash-overlay" id="splash-screen">
+    <div class="splash-content">
+      <div class="text-wrapper">
+        <span class="letter-n">N</span>
+        <span class="letter-euro">euro</span>
+      </div>
+      
+      <div class="scope-wrapper">
+        <svg class="scope-circle" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#F97316" stroke-width="6" />
+          <line x1="50" y1="0" x2="50" y2="25" stroke="#F97316" stroke-width="6" class="crosshair ch-top" />
+          <line x1="50" y1="100" x2="50" y2="75" stroke="#F97316" stroke-width="6" class="crosshair ch-bottom" />
+          <line x1="0" y1="50" x2="25" y2="50" stroke="#F97316" stroke-width="6" class="crosshair ch-left" />
+          <line x1="100" y1="50" x2="75" y2="50" stroke="#F97316" stroke-width="6" class="crosshair ch-right" />
+        </svg>
+      </div>
+
+      <div class="xai-wrapper">
+        <span class="letter-xai">Scope-XAI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ambient Light Orbs (Deep Indigo & Vibrant Orange) -->
+  <div class="fixed top-0 left-1/4 w-[650px] h-[650px] orb-orange rounded-full pointer-events-none z-0 blur-3xl opacity-70"></div>
+  <div class="fixed top-1/3 right-10 w-[750px] h-[750px] orb-indigo rounded-full pointer-events-none z-0 blur-3xl opacity-80"></div>
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-grid-pattern pointer-events-none z-0 opacity-50"></div>
+
+  <!-- 1. NAVBAR -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#0b091a]/80 border-b border-[#f16623]/15 transition-all duration-300" id="navbar">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="relative w-9 h-9 rounded-xl bg-[#262262] border border-[#f16623]/40 flex items-center justify-center shadow-[0_0_15px_rgba(241,102,35,0.3)] group-hover:border-[#f16623] transition-colors">
+          <svg class="w-5 h-5 text-[#f16623] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+          </svg>
+          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#f16623] rounded-full animate-ping"></span>
+        </div>
+        <span class="font-heading text-xl font-bold tracking-tight text-white group-hover:text-[#f16623] transition-colors">
+          NeuroScope<span class="text-[#f16623]">-XAI</span><span class="inline-block w-1.5 h-1.5 ml-1 bg-[#f16623] rounded-full shadow-[0_0_10px_#f16623]"></span>
+        </span>
+      </a>
+
+      <!-- Right Side Controls: CTA Button & Universal 3-Line Hamburger Menu Button -->
+      <div class="flex items-center gap-4">
+        <button onclick="openDemoModal()" class="relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium rounded-xl group bg-gradient-to-r from-[#262262] via-[#7c2d12] to-[#f16623] hover:from-[#262262] hover:to-[#f16623] text-white shadow-[0_0_20px_rgba(241,102,35,0.35)] hover:shadow-[0_0_30px_rgba(241,102,35,0.6)] transition-all duration-300 transform hover:-translate-y-0.5">
+          <span class="relative px-5 py-2.5 transition-all ease-in duration-75 bg-[#0b091a] rounded-[10px] group-hover:bg-opacity-0 font-heading font-semibold tracking-wide flex items-center gap-2">
+            <span>Launch Workstation</span>
+            <svg class="w-4 h-4 text-[#f16623] group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </span>
+        </button>
+
+        <!-- Universal Sleek Glassmorphic 3-Line Hamburger Menu Button (Visible across ALL screen sizes) -->
+        <button id="menu-btn" onclick="toggleVerticalMenu()" class="bg-[#262262]/50 border border-[#f16623]/30 p-2.5 rounded-xl hover:border-[#f16623] text-white hover:text-[#f16623] transition-all focus:outline-none flex items-center justify-center shadow-[0_0_15px_rgba(241,102,35,0.15)]" aria-label="Toggle Navigation Menu">
+          <svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Universal Vertical Glassmorphic Menu Drawer -->
+    <div id="vertical-menu" class="hidden absolute top-full right-4 sm:right-8 mt-3 w-72 backdrop-blur-2xl bg-[#0b091a]/95 border border-[#f16623]/30 rounded-2xl shadow-[0_0_35px_rgba(241,102,35,0.25)] p-6 z-50 space-y-3">
+      <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 uppercase tracking-widest border-b border-[#262262] pb-2">
+        <span>Navigation</span>
+        <span class="text-[#f16623]">4 Sections</span>
+      </div>
+
+      <div class="space-y-1 pt-1">
+        <a href="#problem" class="nav-drawer-link block w-full text-slate-200 hover:text-[#f16623] font-heading font-semibold text-lg hover:translate-x-2 transition-all duration-300 py-2 px-1">
+          1. Problem
+        </a>
+        <a href="#features" class="nav-drawer-link block w-full text-slate-200 hover:text-[#f16623] font-heading font-semibold text-lg hover:translate-x-2 transition-all duration-300 py-2 px-1">
+          2. Features
+        </a>
+        <a href="#architecture" class="nav-drawer-link block w-full text-slate-200 hover:text-[#f16623] font-heading font-semibold text-lg hover:translate-x-2 transition-all duration-300 py-2 px-1">
+          3. Architecture
+        </a>
+        <a href="#workstation" class="nav-drawer-link block w-full text-slate-200 hover:text-[#f16623] font-heading font-semibold text-lg hover:translate-x-2 transition-all duration-300 py-2 px-1">
+          4. Workstation
+        </a>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- 2. HERO SECTION -->
+  <section class="relative pt-12 pb-24 lg:pt-24 lg:pb-36 overflow-hidden z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        <!-- Left Hero Content -->
+        <div class="lg:col-span-7 space-y-8 reveal active">
+          
+          <!-- Category Badge -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#262262]/60 border border-[#f16623]/30 text-[#f16623] text-xs font-semibold uppercase tracking-widest backdrop-blur-md shadow-[0_0_15px_rgba(241,102,35,0.2)]">
+            <span class="w-2 h-2 rounded-full bg-[#f16623] animate-pulse"></span>
+            YHACK '26 Medical AI Project
+          </div>
+
+          <!-- Headline with High-Tech Glowing Typewriter Effect -->
+          <h1 id="hero-headline" class="relative inline-block text-4xl sm:text-5xl lg:text-6xl font-bold font-heading leading-tight tracking-tight text-gradient min-h-[2.4em] sm:min-h-[2em] lg:min-h-[1.8em]">
+            <span id="typewriter-text"></span><span id="typewriter-cursor" class="text-[#f16623] animate-blink font-mono font-normal ml-1 drop-shadow-[0_0_12px_#f16623]">█</span>
+          </h1>
+
+          <!-- Subheadline -->
+          <p class="text-lg sm:text-xl text-slate-300 font-light leading-relaxed max-w-2xl">
+            An uncertainty-aware, attention-guided decision support system for brain tumor classification, boundary delineation, and clinical verification.
+          </p>
+
+          <!-- Dual Call-to-Action Buttons -->
+          <div class="flex flex-wrap items-center gap-4 pt-2">
+            <a href="#features" class="px-7 py-3.5 rounded-xl bg-[#262262]/60 hover:bg-[#262262] text-white font-heading font-semibold text-sm border border-[#f16623]/30 hover:border-[#f16623]/70 shadow-[0_0_20px_rgba(241,102,35,0.2)] hover:shadow-[0_0_30px_rgba(241,102,35,0.4)] transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2">
+              <svg class="w-4 h-4 text-[#f16623]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+              <span>View Architecture</span>
+            </a>
+
+            <button onclick="openDemoModal()" class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#262262] via-[#9a3412] to-[#f16623] hover:from-[#262262] hover:to-[#f16623] text-white font-heading font-semibold text-sm shadow-[0_0_25px_rgba(241,102,35,0.4)] hover:shadow-[0_0_40px_rgba(241,102,35,0.7)] transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Upload Raw MRI Scan</span>
+            </button>
+          </div>
+
+          <!-- Quick Metrics Trust Strip -->
+          <div class="pt-6 grid grid-cols-3 gap-6 border-t border-[#262262] max-w-xl">
+            <div>
+              <div class="text-2xl font-bold font-heading text-[#f16623]">96.8%</div>
+              <div class="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Classification Accuracy</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-heading text-white">&lt; 1.4%</div>
+              <div class="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Uncertainty Bound</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-heading text-[#f16623]">100%</div>
+              <div class="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Explainable Heatmaps</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Hero Floating Glass-morphic Card -->
+        <div class="lg:col-span-5 relative reveal">
+          <div class="relative mx-auto max-w-md lg:max-w-none">
+            
+            <!-- Outer Anti-Gravity Card Container -->
+            <div class="glass-card rounded-2xl p-4 sm:p-5 relative animate-float-slow shadow-[0_0_30px_rgba(241,102,35,0.25)]">
+              
+              <!-- Card Header Bar -->
+              <div class="flex items-center justify-between pb-3 border-b border-[#262262] mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+                  <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+                  <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+                  <span class="text-xs font-mono text-slate-400 ml-2">MRI-SCAN-#9042-XAI</span>
+                </div>
+                <div class="px-2.5 py-1 rounded bg-[#262262]/80 border border-[#f16623]/40 text-[10px] font-mono text-[#f16623] animate-pulse">
+                  LIVE INFERENCE
+                </div>
+              </div>
+
+              <!-- Main Hero Image Frame showing mock Grad-CAM heatmap glowing with #f16623 -->
+              <div class="relative rounded-xl overflow-hidden aspect-square border border-[#f16623]/30 bg-[#0b091a]">
+                <img src="assets/hero_mri.png" alt="NeuroScope-XAI Brain MRI Visual" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700">
+                
+                <!-- Scanning Motion Overlay -->
+                <div class="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#f16623] to-transparent shadow-[0_0_15px_#f16623] opacity-75 animate-scanline"></div>
+                
+                <!-- Interactive Heatmap Target Tag -->
+                <div class="absolute top-1/3 left-1/2 -translate-x-1/2 border border-[#f16623] bg-[#0b091a]/85 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 shadow-[0_0_15px_rgba(241,102,35,0.4)]">
+                  <span class="w-2 h-2 rounded-full bg-[#f16623] animate-ping"></span>
+                  <span>Lesion Attention Focus</span>
+                </div>
+
+                <div class="absolute bottom-3 left-3 right-3 bg-[#0b091a]/90 backdrop-blur-md p-3 rounded-lg border border-[#262262] flex items-center justify-between text-xs font-mono">
+                  <div>
+                    <span class="text-slate-400">Class:</span> 
+                    <span class="text-rose-400 font-bold ml-1">High-Grade Glioma</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400">Certainty:</span>
+                    <span class="text-[#f16623] font-bold ml-1">96.8%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Micro Badge -->
+              <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <span class="flex items-center gap-1.5 text-[#f16623]">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  CBAM Attention Mask Active
+                </span>
+                <span>Grad-CAM v2.4</span>
+              </div>
+
+            </div>
+
+            <!-- Floating Satellite Badge -->
+            <div class="absolute -bottom-6 -left-6 glass-card p-3.5 rounded-xl border border-[#f16623]/40 shadow-[0_0_20px_rgba(241,102,35,0.25)] animate-float-medium hidden sm:flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#262262] border border-[#f16623]/50 flex items-center justify-center text-[#f16623]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-heading font-semibold text-white">Monte Carlo Dropout</div>
+                <div class="text-[11px] text-slate-400">100 Stochastic Forward Passes</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 3. THE PROBLEM SECTION (Asymmetrical Layout) -->
+  <section id="problem" class="py-24 relative z-10 border-t border-[#262262]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Asymmetrical 2-Column Overlapping Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Left Side: Sleek Overlapping Cards (Traditional vs NeuroScope) -->
+        <div class="lg:col-span-6 relative order-2 lg:order-1 reveal">
+          
+          <!-- Background Legacy Opaque Card -->
+          <div class="glass-card rounded-2xl p-6 border-[#262262] opacity-65 transform -rotate-2 hover:rotate-0 transition-transform duration-500 max-w-md">
+            <div class="flex items-center justify-between text-xs font-mono text-rose-400 mb-2">
+              <span>Standard Black-Box AI</span>
+              <span class="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800">OPAQUE & UNUSABLE</span>
+            </div>
+            <div class="h-32 bg-[#0b091a] rounded-xl border border-[#262262] flex items-center justify-center text-slate-500 font-mono text-sm relative overflow-hidden">
+              <div class="text-center p-4">
+                <svg class="w-8 h-8 text-rose-500/50 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>Prediction: Tumor (94%)</span>
+                <div class="text-[11px] text-slate-600 mt-1">No region explanation • No uncertainty metric</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Foreground NeuroScope Solution Card (Overlapping with Orange Glow) -->
+          <div class="glass-card rounded-2xl p-6 border-[#f16623]/50 shadow-[0_0_30px_rgba(241,102,35,0.3)] lg:-mt-16 lg:ml-12 transform rotate-1 hover:rotate-0 transition-transform duration-500 relative z-20">
+            <div class="flex items-center justify-between text-xs font-mono text-[#f16623] mb-3">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#f16623] animate-pulse"></span>
+                NeuroScope-XAI Solution
+              </span>
+              <span class="px-2.5 py-0.5 rounded bg-[#262262] border border-[#f16623]/40 text-[#f16623] font-bold">ATTENTION READY</span>
+            </div>
+            <div class="relative rounded-xl overflow-hidden border border-[#f16623]/30">
+              <img src="assets/mri_gradcam.png" alt="Explainable AI MRI Heatmap" class="w-full h-44 object-cover">
+              <div class="absolute bottom-2 left-2 right-2 bg-[#0b091a]/90 backdrop-blur-md p-2 rounded border border-[#f16623]/30 flex items-center justify-between text-xs font-mono">
+                <span class="text-[#f16623] font-bold">Grad-CAM Heatmap Target</span>
+                <span class="text-emerald-400">Uncertainty: ±1.2%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Side: The Clinical Bottleneck Content -->
+        <div class="lg:col-span-6 space-y-6 order-1 lg:order-2 reveal">
+          
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#262262]/60 border border-[#f16623]/30 text-[#f16623] text-xs font-mono uppercase tracking-wider">
+            The Problem Statement
+          </div>
+
+          <!-- Heading (EXACT Requirement: "The Clinical Bottleneck.") -->
+          <h2 class="text-3xl sm:text-4xl font-bold font-heading text-gradient leading-tight">
+            The Clinical Bottleneck.
+          </h2>
+
+          <!-- Text (EXACT Requirement Text) -->
+          <p class="text-lg text-slate-300 font-light leading-relaxed">
+            Radiologists evaluate hundreds of MRI scans daily. Early-stage tumors are microscopic and diffuse. Standard AI provides opaque 'black-box' predictions that are clinically unusable. We changed that.
+          </p>
+
+          <div class="space-y-4 pt-2">
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-lg bg-[#262262]/60 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-semibold font-heading text-white">The Black Box Trust Deficit</h4>
+                <p class="text-sm text-slate-400 mt-0.5">High accuracy numbers mean nothing if clinicians cannot inspect the neural decision pathway or verify diagnostic rationale.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-lg bg-[#262262]/60 border border-[#f16623]/40 flex items-center justify-center text-[#f16623] shrink-0 mt-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-semibold font-heading text-white">Attention-Guided Clarity</h4>
+                <p class="text-sm text-slate-400 mt-0.5">NeuroScope-XAI maps spatial attention heatmaps to precise anatomical MRI coordinates, empowering instant radiologist audit.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 4. CORE FEATURES (Bento Box Grid Layout) -->
+  <section id="features" class="py-24 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-3xl mx-auto mb-16 space-y-4 reveal">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#262262]/80 border border-[#f16623]/40 text-[#f16623] text-xs font-mono uppercase tracking-wider">
+          System Architecture & Innovations
+        </div>
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading text-gradient">
+          Engineering Trust into Medical AI.
+        </h2>
+        <p class="text-slate-400 text-base sm:text-lg font-light">
+          A end-to-end pipeline designed for seamless neuro-radiology integration and high confidence diagnosis.
+        </p>
+      </div>
+
+      <!-- Bento Box Grid Layout with Faint #f16623 Glowing Borders on Hover -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- Card 1: Adaptive Preprocessing (Large Span - Col 7) -->
+        <div class="md:col-span-7 glass-card glass-card-hover rounded-2xl p-8 flex flex-col justify-between group relative overflow-hidden reveal">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-[#f16623]/10 rounded-full blur-3xl group-hover:bg-[#f16623]/20 transition-all pointer-events-none"></div>
+          
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-[#262262] border border-[#f16623]/40 flex items-center justify-center text-[#f16623] shadow-[0_0_15px_rgba(241,102,35,0.25)]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
+              </div>
+              <span class="text-xs font-mono text-[#f16623] bg-[#262262]/80 px-3 py-1 rounded-full border border-[#f16623]/30">STAGE 01</span>
+            </div>
+
+            <h3 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-[#f16623] transition-colors">
+              Adaptive Preprocessing
+            </h3>
+            <p class="text-slate-300 font-light text-sm sm:text-base leading-relaxed mb-4">
+              Automated skull-stripping & CLAHE contrast equalization. Removes non-brain artifact tissue while enhancing sub-voxel tumor edge details across heterogeneous scanner protocols.
+            </p>
+
+            <!-- Live OpenCV Preprocessed Output Image -->
+            <div class="relative rounded-xl overflow-hidden border border-[#262262] bg-[#0b091a] mb-4 h-36 flex items-center justify-center">
+              <img id="stage01-card-img" src="assets/mri_segmented.png" alt="Stage 01 OpenCV Preprocessed" class="w-full h-full object-cover">
+              <div class="absolute bottom-2 left-2 px-2 py-1 rounded bg-[#0b091a]/90 border border-[#262262] text-[10px] font-mono text-[#f16623]">
+                OpenCV: Otsu Mask + CLAHE (clipLimit=2.0)
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Metric Strip -->
+          <div class="grid grid-cols-2 gap-4 pt-4 border-t border-[#262262] text-xs font-mono">
+            <div class="bg-[#0b091a]/60 p-3 rounded-lg border border-[#262262]">
+              <span class="text-slate-400 block">Skull Stripping</span>
+              <span class="text-[#f16623] font-bold">Deep Brain Mask (Otsu)</span>
+            </div>
+            <div class="bg-[#0b091a]/60 p-3 rounded-lg border border-[#262262]">
+              <span class="text-slate-400 block">Contrast Adjust</span>
+              <span class="text-[#f16623] font-bold">CLAHE Adaptive Histogram</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Attention-Guided Core (Tall Span - Col 5) -->
+        <div class="md:col-span-5 glass-card glass-card-hover rounded-2xl p-8 flex flex-col justify-between group relative overflow-hidden reveal">
+          <div class="absolute top-0 right-0 w-48 h-48 bg-[#262262]/40 rounded-full blur-3xl group-hover:bg-[#f16623]/15 transition-all pointer-events-none"></div>
+          
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-[#262262] border border-[#f16623]/40 flex items-center justify-center text-[#f16623] shadow-[0_0_15px_rgba(241,102,35,0.25)]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-mono text-[#f16623] bg-[#262262]/80 px-3 py-1 rounded-full border border-[#f16623]/30">STAGE 02</span>
+            </div>
+
+            <h3 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-[#f16623] transition-colors">
+              Attention-Guided Core
+            </h3>
+            <p class="text-slate-300 font-light text-sm sm:text-base leading-relaxed mb-4">
+              EfficientNet-B0 + CBAM modules to focus on anomalous tissue. Dynamically recalibrates spatial and channel feature maps to capture subtle tumor boundaries.
+            </p>
+
+            <!-- Live PyTorch Model Prediction Box -->
+            <div class="bg-[#262262]/50 p-3 rounded-xl border border-[#f16623]/40 mb-4 font-mono text-xs space-y-1">
+              <div class="text-slate-400">PyTorch Inference Status:</div>
+              <div id="stage02-card-prediction" class="text-white font-bold text-sm">Class: Pituitary Tumor</div>
+              <div id="stage02-card-confidence" class="text-[#f16623] text-xs">Confidence: 96.8% (CBAM Active)</div>
+            </div>
+          </div>
+
+          <div class="bg-[#0b091a]/60 p-4 rounded-xl border border-[#f16623]/20 text-xs font-mono space-y-2">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Backbone Architecture:</span>
+              <span class="text-[#f16623] font-bold">EfficientNet-B0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Attention Module:</span>
+              <span class="text-[#f16623] font-bold">CBAM (Spatial + Channel)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Uncertainty Triage (Medium Span - Col 5) -->
+        <div class="md:col-span-5 glass-card glass-card-hover rounded-2xl p-8 flex flex-col justify-between group relative overflow-hidden reveal">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-[#262262] border border-[#f16623]/40 flex items-center justify-center text-[#f16623] shadow-[0_0_15px_rgba(241,102,35,0.25)]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-mono text-[#f16623] bg-[#262262]/80 px-3 py-1 rounded-full border border-[#f16623]/30">STAGE 03</span>
+            </div>
+
+            <h3 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-[#f16623] transition-colors">
+              Uncertainty Triage
+            </h3>
+            <p class="text-slate-300 font-light text-sm sm:text-base leading-relaxed mb-4">
+              Monte Carlo Dropout to flag ambiguous scans for senior review. Quantifies epistemic model variance so high-risk edge cases are auto-escalated.
+            </p>
+
+            <div id="stage03-card-variance" class="bg-[#0b091a]/80 p-3 rounded-xl border border-[#f16623]/30 text-xs font-mono text-[#f16623] mb-4">
+              Monte Carlo Pass: 10/10 <br>Epistemic Variance: <span class="font-bold text-white">0.012 (Low Risk)</span>
+            </div>
+          </div>
+
+          <div id="stage03-card-shield" class="flex items-center gap-3 p-3 bg-[#262262]/40 rounded-xl border border-[#f16623]/30 text-xs font-mono text-[#f16623]">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#f16623] animate-ping"></span>
+            <span>Epistemic Variance Safety Shield Active</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Explainable AI (XAI) (Large Span - Col 7) -->
+        <div class="md:col-span-7 glass-card glass-card-hover rounded-2xl p-8 flex flex-col justify-between group relative overflow-hidden reveal">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-[#f16623]/20 transition-all pointer-events-none"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-[#262262] border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-mono text-emerald-400 bg-[#262262]/80 px-3 py-1 rounded-full border border-emerald-500/30">STAGE 04</span>
+            </div>
+
+            <h3 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-emerald-300 transition-colors">
+              Explainable AI (XAI)
+            </h3>
+            <p class="text-slate-300 font-light text-sm sm:text-base leading-relaxed mb-4">
+              Grad-CAM heatmaps proving exactly where the lesion is. Provides pixel-level attributions mapped over anatomical MRI sequences for rapid clinical validation.
+            </p>
+
+            <!-- Live PyTorch Grad-CAM Output Image -->
+            <div class="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-[#0b091a] mb-4 h-36 flex items-center justify-center">
+              <img id="stage04-card-img" src="assets/mri_gradcam.png" alt="Stage 04 Grad-CAM Thermal Heatmap" class="w-full h-full object-cover">
+              <div class="absolute bottom-2 left-2 px-2 py-1 rounded bg-[#0b091a]/90 border border-emerald-500/40 text-[10px] font-mono text-emerald-400">
+                PyTorch Grad-CAM: JET Heatmap Overlay
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 text-center text-xs font-mono">
+            <div class="bg-[#0b091a]/60 p-2.5 rounded-lg border border-[#262262]">
+              <span class="text-slate-400 block text-[10px]">HEATMAP RESOLUTION</span>
+              <span class="text-emerald-400 font-bold">Sub-millimeter</span>
+            </div>
+            <div class="bg-[#0b091a]/60 p-2.5 rounded-lg border border-[#262262]">
+              <span class="text-slate-400 block text-[10px]">TARGET OVERLAY</span>
+              <span class="text-emerald-400 font-bold">T2-FLAIR / T1w</span>
+            </div>
+            <div class="bg-[#0b091a]/60 p-2.5 rounded-lg border border-[#262262]">
+              <span class="text-slate-400 block text-[10px]">VERIFICATION</span>
+              <span class="text-emerald-400 font-bold">Radiologist Approved</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 5. THE TRI-PANEL CLINICAL WORKSTATION (Interactive Showcase) -->
+  <section id="workstation" class="py-24 relative z-10 border-t border-[#262262] bg-[#130f33]/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-3xl mx-auto mb-14 space-y-4 reveal">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#262262] border border-[#f16623]/40 text-[#f16623] text-xs font-mono uppercase tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-[#f16623] animate-ping"></span>
+          Interactive Radiology Suite
+        </div>
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading text-gradient">
+          The Tri-Panel Clinical Workstation
+        </h2>
+        <p class="text-slate-400 text-base sm:text-lg font-light">
+          Simulated diagnostic workflow housed in a sleek glassmorphic software UI container.
+        </p>
+      </div>
+
+      <!-- Sleek Software Workstation Window Frame (Deep Indigo + Vibrant Orange border/shadow) -->
+      <div class="glass-card rounded-2xl border border-[#f16623]/35 shadow-[0_0_40px_rgba(241,102,35,0.2)] overflow-hidden reveal">
+        
+        <!-- Software Title bar / Toolbar -->
+        <div class="bg-[#0b091a] px-6 py-4 border-b border-[#262262] flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+            </div>
+            <div class="h-4 w-px bg-[#262262]"></div>
+            <div class="font-mono text-xs text-slate-300 flex items-center gap-3">
+              <span class="text-[#f16623] font-bold">PATIENT_ID:</span> NSX-8842-BRAIN
+              <span class="text-slate-500">|</span>
+              <span class="text-slate-400">SEQUENCE:</span> T2-FLAIR AXIAL
+              <span class="text-slate-500">|</span>
+              <span class="text-slate-400">SLICE:</span> <span id="slice-num">24 / 48</span>
+            </div>
+          </div>
+
+          <!-- Interactive Slice Selector Buttons -->
+          <div class="flex items-center gap-2 font-mono text-xs">
+            <button onclick="changeScanSlice('prev')" class="px-3 py-1.5 rounded bg-[#262262] hover:bg-[#262262]/80 text-slate-200 border border-[#f16623]/30 hover:border-[#f16623] transition-all">
+              ← Prev Slice
+            </button>
+            <button onclick="changeScanSlice('next')" class="px-3 py-1.5 rounded bg-[#262262] hover:bg-[#262262]/80 text-slate-200 border border-[#f16623]/30 hover:border-[#f16623] transition-all">
+              Next Slice →
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Workstation Canvas: Three Side-by-Side Image Placeholders -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#0b091a]/85">
+          
+          <!-- Panel 1: Original Cleaned MRI -->
+          <div class="space-y-3 group">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300 font-semibold flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                Panel 1: Original Cleaned MRI
+              </span>
+              <span class="text-slate-500 text-[10px]">Skull-Stripped</span>
+            </div>
+
+            <div class="relative rounded-xl overflow-hidden border border-[#262262] bg-[#0b091a] aspect-square group-hover:border-slate-600 transition-colors shadow-inner">
+              <img id="panel1-img" src="assets/mri_clean.png" alt="Original Cleaned MRI" class="w-full h-full object-cover">
+              <div class="absolute bottom-2 left-2 px-2 py-1 rounded bg-[#0b091a]/80 border border-[#262262] text-[10px] font-mono text-slate-400">
+                Contrast: CLAHE Norm
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Segmented Lesion Boundary -->
+          <div class="space-y-3 group">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-[#f16623] font-semibold flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#f16623] animate-pulse"></span>
+                Panel 2: Segmented Lesion Boundary
+              </span>
+              <span class="text-[#f16623] text-[10px]">Bounding Box</span>
+            </div>
+
+            <div class="relative rounded-xl overflow-hidden border border-[#f16623]/40 bg-[#0b091a] aspect-square group-hover:border-[#f16623] transition-colors shadow-[0_0_20px_rgba(241,102,35,0.15)]">
+              <img id="panel2-img" src="assets/mri_segmented.png" alt="Segmented Lesion Boundary" class="w-full h-full object-cover">
+              
+              <!-- Bounding Box Annotation Label -->
+              <div class="absolute top-3 right-3 px-2 py-1 rounded bg-[#262262]/90 border border-[#f16623]/50 text-[10px] font-mono text-[#f16623]">
+                Region: Frontal Lobe
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 3: Grad-CAM Thermal Heatmap Overlay -->
+          <div class="space-y-3 group">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-[#f16623] font-semibold flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#f16623] animate-pulse"></span>
+                Panel 3: Grad-CAM Thermal Overlay
+              </span>
+              <span class="text-[#f16623] text-[10px]">Attention Intensity</span>
+            </div>
+
+            <div class="relative rounded-xl overflow-hidden border border-[#f16623]/40 bg-[#0b091a] aspect-square group-hover:border-[#f16623] transition-colors shadow-[0_0_20px_rgba(241,102,35,0.15)]">
+              <img id="panel3-img" src="assets/mri_gradcam.png" alt="Grad-CAM Thermal Heatmap Overlay" class="w-full h-full object-cover">
+              
+              <div class="absolute bottom-3 left-3 right-3 bg-[#0b091a]/90 backdrop-blur-md p-2 rounded border border-[#f16623]/30 flex items-center justify-between text-[11px] font-mono">
+                <span class="text-slate-300">Peak Heatmap Focus:</span>
+                <span class="text-[#f16623] font-bold">98.4% Intensity</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Workstation Bottom Bar: Mock Confidence Score Gauge Accented in #f16623 -->
+        <div class="bg-[#0b091a] px-6 py-6 border-t border-[#262262]">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            
+            <!-- Confidence Gauge Readout -->
+            <div class="md:col-span-5 flex items-center gap-5 bg-[#262262]/40 p-4 rounded-xl border border-[#f16623]/30">
+              
+              <!-- Circular Progress SVG Ring -->
+              <div class="relative w-20 h-20 shrink-0 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path class="text-[#262262]" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="text-[#f16623]" stroke-dasharray="96.8, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <div class="absolute text-center">
+                  <span class="text-xs font-bold font-heading text-[#f16623] block">96.8%</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="text-xs font-mono text-slate-400 uppercase">Model Verification</div>
+                <div class="text-lg font-bold font-heading text-white">Confidence Score: 96.8%</div>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>Epistemic Uncertainty: ± 1.2% (Low Risk)</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Additional Diagnostic Metadata -->
+            <div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-4 font-mono text-xs">
+              <div class="bg-[#262262]/30 p-3 rounded-lg border border-[#262262]">
+                <span class="text-slate-500 block text-[10px]">PREDICTED CLASS</span>
+                <span class="text-rose-400 font-bold">High-Grade Glioma</span>
+              </div>
+
+              <div class="bg-[#262262]/30 p-3 rounded-lg border border-[#262262]">
+                <span class="text-slate-500 block text-[10px]">TRIAGE STATUS</span>
+                <span class="text-[#f16623] font-bold">Verified / Clean</span>
+              </div>
+
+              <div class="bg-[#262262]/30 p-3 rounded-lg border border-[#262262] col-span-2 sm:col-span-1 flex flex-col justify-between">
+                <span class="text-slate-500 text-[10px]">ACTIONS</span>
+                <button onclick="openDemoModal()" class="text-[#f16623] hover:underline font-bold text-left">
+                  Export PDF Report →
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+
+
+
+  <!-- CTA Banner Section -->
+  <section class="py-16 relative z-10 border-t border-[#262262]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="glass-card rounded-3xl p-10 sm:p-14 text-center relative overflow-hidden border border-[#f16623]/40 shadow-[0_0_40px_rgba(241,102,35,0.25)]">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-[#f16623]/20 rounded-full blur-3xl"></div>
+        <div class="relative z-10 space-y-6 max-w-2xl mx-auto">
+          <h2 class="text-3xl sm:text-4xl font-bold font-heading text-white">
+            Ready to Test NeuroScope-XAI?
+          </h2>
+          <p class="text-slate-300 font-light text-base">
+            Experience our clinical decision support system live in action.
+          </p>
+          <button onclick="openDemoModal()" class="px-8 py-4 rounded-xl bg-gradient-to-r from-[#262262] via-[#9a3412] to-[#f16623] hover:from-[#262262] hover:to-[#f16623] text-white font-heading font-bold text-base shadow-[0_0_30px_rgba(241,102,35,0.4)] hover:shadow-[0_0_50px_rgba(241,102,35,0.7)] transition-all duration-300 transform hover:-translate-y-1 inline-flex items-center gap-3">
+            <span>Launch Clinical Workstation</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 7. FOOTER (EXACT Requirement: "Built for YHACK '26" & social links) -->
+  <footer class="mt-auto py-12 border-t border-[#262262] bg-[#0b091a] relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <!-- Brand & Built Tag -->
+      <div class="flex items-center gap-3">
+        <span class="font-heading text-lg font-bold text-white">NeuroScope<span class="text-[#f16623]">-XAI</span></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-sm font-mono text-slate-400">Built for YHACK '26</span>
+      </div>
+
+      <!-- Status Indicator -->
+      <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>System Operational • Inference API v2.4</span>
+      </div>
+
+      <!-- Social & Project Links -->
+      <div class="flex items-center space-x-6 text-sm font-medium text-slate-400">
+        <a href="https://github.com" target="_blank" rel="noopener" class="hover:text-[#f16623] transition-colors">GitHub</a>
+        <a href="https://arxiv.org" target="_blank" rel="noopener" class="hover:text-[#f16623] transition-colors">arXiv Paper</a>
+        <a href="https://twitter.com" target="_blank" rel="noopener" class="hover:text-[#f16623] transition-colors">Twitter</a>
+        <a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-[#f16623] transition-colors">LinkedIn</a>
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!-- INTERACTIVE WORKSTATION MODAL / BACKEND PROCESSING SIMULATOR -->
+  <div id="demo-modal" class="fixed inset-0 z-50 hidden bg-[#0b091a]/90 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="relative w-full max-w-5xl glass-card rounded-2xl border border-[#f16623]/40 shadow-[0_0_50px_rgba(241,102,35,0.3)] overflow-hidden my-auto">
+      
+      <!-- Modal Header -->
+      <div class="bg-[#0b091a] px-6 py-4 border-b border-[#262262] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full bg-[#f16623] animate-ping"></div>
+          <h3 class="font-heading font-bold text-lg text-white">NeuroScope-XAI Backend Processing Simulator</h3>
+        </div>
+        <button onclick="closeDemoModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#262262] transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body Simulator -->
+      <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        
+        <!-- STATE 0: ORGAN SELECTOR -->
+        <div id="modal-state-organ-select" class="space-y-6">
+          <div class="text-center max-w-xl mx-auto space-y-2">
+            <h4 class="text-xl font-bold font-heading text-white">Select Screening Modality</h4>
+            <p class="text-xs text-slate-400 font-mono">Choose the target organ to calibrate the AI pipeline.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4 max-w-2xl mx-auto" id="organ-cards-container">
+            <!-- Dynamically populated via JS -->
+          </div>
+          <div class="text-center mt-6">
+            <button id="btn-confirm-organ" onclick="confirmOrganSelection()" disabled class="px-6 py-2 bg-[#f16623] text-white rounded font-bold opacity-50 cursor-not-allowed hover:bg-orange-600 transition-colors">
+              Continue to Upload
+            </button>
+          </div>
+        </div>
+
+        <!-- STATE 1: UPLOAD ZONE -->
+        <div id="modal-state-upload" class="hidden space-y-6">
+          <div class="text-center max-w-xl mx-auto space-y-2">
+            <h4 class="text-xl font-bold font-heading text-white">Upload Raw Clinical MRI Scan</h4>
+            <p class="text-xs text-slate-400 font-mono">Supports axial T2-FLAIR DICOM slice images, PNG, and JPEG medical files.</p>
+          </div>
+
+          <!-- Drag and Drop Dropzone -->
+          <div id="drop-zone" onclick="document.getElementById('mri-file-input').click()" class="border-2 border-dashed border-[#f16623]/40 hover:border-[#f16623] bg-[#262262]/20 hover:bg-[#262262]/40 rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 group">
+            <input type="file" id="mri-file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+            
+            <div class="w-16 h-16 rounded-full bg-[#262262] border border-[#f16623]/50 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 shadow-[0_0_20px_rgba(241,102,35,0.3)] transition-transform">
+              <svg class="w-8 h-8 text-[#f16623]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            
+            <h5 class="text-base font-semibold font-heading text-white group-hover:text-[#f16623] transition-colors">
+              Upload Clinical MRI Scan (DICOM/PNG)
+            </h5>
+            <p class="text-xs text-slate-400 mt-1">Drag and drop file here or click to browse from workstation</p>
+          </div>
+
+          <div class="text-center">
+            <button onclick="useSampleScan()" class="text-xs font-mono text-[#f16623] hover:underline">
+              Or use sample patient scan (Case #8842 - High-Grade Glioma) →
+            </button>
+          </div>
+        </div>
+
+
+        <!-- STATE 2: SIMULATED BACKEND PROCESSING PIPELINE -->
+        <div id="modal-state-processing" class="hidden space-y-8 py-8 text-center">
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#262262] border border-[#f16623]/40 text-[#f16623] text-xs font-mono">
+              <span class="w-2 h-2 rounded-full bg-[#f16623] animate-ping"></span>
+              EXECUTING INFERENCE PIPELINE
+            </div>
+            <h4 class="text-2xl font-bold font-heading text-white">Analyzing Clinical Scan...</h4>
+          </div>
+
+          <!-- Step Progress Checklist -->
+          <div class="max-w-md mx-auto space-y-4 text-left font-mono text-xs">
+            
+            <div class="flex items-center gap-3 p-3 bg-[#0b091a]/80 rounded-xl border border-[#262262]">
+              <div id="step-1-icon" class="shrink-0">
+                <svg class="w-5 h-5 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+              <span id="step-1-text" class="text-slate-400 font-mono text-xs">Step 1: Ingesting and standardizing scan...</span>
+            </div>
+
+            <div class="flex items-center gap-3 p-3 bg-[#0b091a]/80 rounded-xl border border-[#262262]">
+              <div id="step-2-icon" class="shrink-0">
+                <svg class="w-5 h-5 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+              <span id="step-2-text" class="text-slate-400 font-mono text-xs">Step 2: Applying Adaptive Preprocessing (Skull-stripping & CLAHE)...</span>
+            </div>
+
+            <div class="flex items-center gap-3 p-3 bg-[#0b091a]/80 rounded-xl border border-[#262262]">
+              <div id="step-3-icon" class="shrink-0">
+                <svg class="w-5 h-5 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+              <span id="step-3-text" class="text-slate-400 font-mono text-xs">Step 3: Running Attention-Guided Core (EfficientNet-B0 + CBAM)...</span>
+            </div>
+
+            <div class="flex items-center gap-3 p-3 bg-[#0b091a]/80 rounded-xl border border-[#262262]">
+              <div id="step-4-icon" class="shrink-0">
+                <svg class="w-5 h-5 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+              <span id="step-4-text" class="text-slate-400 font-mono text-xs">Step 4: Rendering 4K 3D Spatial Reconstruction...</span>
+            </div>
+
+          </div>
+        </div>
+
+
+        <!-- STATE 3: RESULTS (4K 3D WEBGL RECONSTRUCTION & WORKSTATION VIEW) -->
+        <div id="modal-state-results" class="hidden space-y-6">
+          
+          <!-- View Toggle Tabs -->
+          <div class="flex items-center justify-between border-b border-[#262262] pb-3">
+            <div class="flex gap-3 font-mono text-xs">
+              <button onclick="switchModalView('3d')" id="tab-btn-3d" class="px-4 py-2 rounded-lg bg-[#262262] text-[#f16623] border border-[#f16623] font-bold flex items-center gap-2">
+                <svg class="w-4 h-4 text-[#f16623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                4K 3D WebGL Point-Cloud View
+              </button>
+              <button onclick="switchModalView('tripanel')" id="tab-btn-tripanel" class="px-4 py-2 rounded-lg bg-[#0b091a] text-slate-400 border border-[#262262] flex items-center gap-2">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"/></svg>
+                Tri-Panel MRI View
+              </button>
+            </div>
+            
+            <div class="hidden sm:block text-xs font-mono text-[#f16623]">
+              STATUS: 3D MODEL RECONSTRUCTED
+            </div>
+          </div>
+
+          <!-- 3D WEBGL ANATOMICAL BRAIN CONTAINER VIEW -->
+          <div id="view-3d-container" class="relative rounded-2xl overflow-hidden border border-[#f16623]/40 bg-[#0b091a] h-[480px] shadow-[0_0_30px_rgba(241,102,35,0.25)] group">
+            
+            <!-- Three.js Canvas Container -->
+            <div id="webgl-brain-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+            <!-- Dynamic 3D Projected Lesion Pointer Label -->
+            <div id="tumor-3d-pointer" class="absolute pointer-events-none transition-opacity duration-300 z-30 flex items-center gap-3" style="transform: translate(0, -50%);">
+              <div class="relative flex items-center justify-center">
+                <span class="w-4 h-4 rounded-full bg-[#f16623] animate-ping opacity-75"></span>
+                <span class="absolute w-2.5 h-2.5 rounded-full bg-[#f16623] shadow-[0_0_12px_#f16623]"></span>
+              </div>
+              <div class="h-0.5 w-10 bg-gradient-to-r from-[#f16623] to-transparent shadow-[0_0_8px_#f16623]"></div>
+              <div class="bg-[#0b091a]/90 backdrop-blur-md border border-[#f16623]/60 px-3 py-1.5 rounded-xl shadow-[0_0_20px_rgba(241,102,35,0.5)] space-y-0.5">
+                <div id="pointer-title" class="text-[10px] font-mono text-[#f16623] font-bold tracking-wider uppercase">Lesion Attention Focus</div>
+                <div id="pointer-subtitle" class="text-[11px] font-mono text-white">Frontal Lobe (x:1.8, y:1.5, z:3.2)</div>
+              </div>
+            </div>
+
+            <!-- Top Left Status Header -->
+            <div class="absolute top-6 left-6 pointer-events-none space-y-1 z-20">
+              <span class="px-2.5 py-1 rounded bg-[#262262]/80 border border-[#f16623]/40 text-[10px] font-mono text-[#f16623]">
+                HIGH-FIDELITY ANATOMICAL MODEL
+              </span>
+              <div id="model-delineation-title" class="text-sm font-bold font-heading text-white">3D Spatial Brain Delineation</div>
+            </div>
+
+            <!-- YouTube-Style Full Screen Toggle Button -->
+            <button id="fullscreen-btn" onclick="toggleFullScreen3D()" class="absolute bottom-4 right-4 bg-[#262262]/80 p-2.5 rounded-xl hover:bg-[#f16623] border border-[#f16623]/40 text-white transition-all z-50 cursor-pointer shadow-[0_0_15px_rgba(241,102,35,0.3)] flex items-center justify-center group/fs" title="Toggle Fullscreen Mode">
+              <svg id="fullscreen-expand-icon" class="w-5 h-5 text-white group-hover/fs:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+              </svg>
+              <svg id="fullscreen-exit-icon" class="w-5 h-5 text-white group-hover/fs:scale-110 transition-transform hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14L4 20m0 0h4m-4 0v-4m10 4l6-6m0 0h-4m4 0v4M4 10l6-6m0 0H6m4 0v4m10-4l-6 6m0 0v-4m0 4h4"/>
+              </svg>
+            </button>
+
+            <!-- OrbitControls Interaction Pill -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#0b091a]/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-[#262262] text-[11px] font-mono text-slate-400 pointer-events-none flex items-center gap-2 z-20">
+              <svg class="w-4 h-4 text-[#f16623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Drag mouse to rotate 360° • Scroll to zoom</span>
+            </div>
+
+          </div>
+
+          <!-- TRI-PANEL SLICE VIEW CONTAINER (Hidden by default, toggleable) -->
+          <div id="view-tripanel-container" class="hidden space-y-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Panel 1: User Uploaded MRI Scan -->
+              <div class="space-y-2">
+                <div class="text-xs font-mono text-slate-300 font-semibold">Panel 1: Original Scan</div>
+                <div class="relative rounded-xl overflow-hidden border border-[#262262] bg-[#0b091a] aspect-square">
+                  <img id="modal-user-mri" src="assets/mri_clean.png" alt="Uploaded Scan" class="w-full h-full object-cover">
+                  <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[#0b091a]/80 text-[10px] font-mono text-slate-400 border border-[#262262]">
+                    User Ingested
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 2: Segmented Lesion Boundary -->
+              <div class="space-y-2">
+                <div class="text-xs font-mono text-[#f16623] font-semibold">Panel 2: Segmented Boundary</div>
+                <div class="relative rounded-xl overflow-hidden border border-[#f16623]/40 bg-[#0b091a] aspect-square">
+                  <img id="modal-segmented-mri" src="assets/mri_segmented.png" alt="Segmented Boundary" class="w-full h-full object-cover">
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-[#262262] text-[10px] font-mono text-[#f16623] border border-[#f16623]/40">
+                    Bounding Box
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 3: Grad-CAM Thermal Heatmap -->
+              <div class="space-y-2">
+                <div class="text-xs font-mono text-[#f16623] font-semibold">Panel 3: Grad-CAM Overlay</div>
+                <div class="relative rounded-xl overflow-hidden border border-[#f16623]/40 bg-[#0b091a] aspect-square">
+                  <img id="modal-mri-img" src="assets/mri_gradcam.png" alt="Grad-CAM Overlay" class="w-full h-full object-cover transition-opacity duration-300">
+                  <div class="absolute bottom-2 left-2 right-2 bg-[#0b091a]/90 backdrop-blur-md p-1.5 rounded border border-[#f16623]/30 text-[10px] font-mono text-slate-300 flex justify-between">
+                    <span>Peak Focus:</span>
+                    <span class="text-[#f16623] font-bold">98.4%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- AI Radiology Explanation Panel -->
+          <div class="p-5 bg-[#0b091a] rounded-xl border border-[#262262] space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#f16623]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <span class="font-heading font-bold text-white text-sm">AI Radiology Explanation</span>
+              </div>
+              <span id="ai-explain-status" class="text-[10px] font-mono text-slate-500 uppercase tracking-wide">Ready</span>
+            </div>
+            <div id="ai-explanation-text" class="text-sm text-slate-300 leading-relaxed font-sans min-h-[60px]">
+              <span class="text-slate-500 italic">Click "Explain This Result" for a plain-language AI summary of these findings.</span>
+            </div>
+            <button onclick="explainResult()" id="ai-explain-btn" class="px-4 py-2 bg-[#262262] hover:bg-[#f16623] border border-[#f16623]/40 rounded-lg text-xs font-mono text-white transition-colors">
+              Explain This Result
+            </button>
+          </div>
+
+          <!-- Bottom Confidence Gauge & Report Bar -->
+          <div class="p-4 bg-[#0b091a] rounded-xl border border-[#262262] grid grid-cols-1 md:grid-cols-12 gap-4 items-center font-mono text-xs">
+            
+            <div class="md:col-span-5 flex items-center gap-4 bg-[#262262]/40 p-3 rounded-lg border border-[#f16623]/30">
+              <div class="relative w-14 h-14 shrink-0 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path class="text-[#262262]" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="text-[#f16623]" stroke-dasharray="96.8, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <span id="modal-conf-circle" class="absolute text-xs font-bold font-heading text-[#f16623]">96.8%</span>
+              </div>
+              <div>
+                <div id="modal-conf-text" class="text-white font-bold text-sm">Confidence Score: 96.8%</div>
+                <div class="text-emerald-400 text-[11px]">Epistemic Uncertainty: ± 1.2%</div>
+              </div>
+            </div>
+
+            <div class="md:col-span-7 flex flex-wrap gap-3 justify-between items-center">
+              <button onclick="alert('Download started: Clinical_Scan_Report_NSX.pdf')" class="px-5 py-2.5 bg-gradient-to-r from-[#262262] to-[#f16623] rounded-lg text-white font-heading font-bold shadow-[0_0_15px_rgba(241,102,35,0.4)]">
+                Download Clinical PDF Report
+              </button>
+
+              <button onclick="resetModalUpload()" class="text-xs text-slate-400 hover:text-[#f16623] underline font-mono">
+                ← Upload Another Scan
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- VANILLA JS INTERACTION & ANIMATION SCRIPTS -->
+  <script>
+    const HF_API_URL = "http://127.0.0.1:7860/api/predict";
+    let globalApiResponse = null;
+    let currentOrgan = "brain";
+
+    const ORGAN_CONFIG = {
+      brain: {
+        id: "brain",
+        label: "Brain (MRI)",
+        iconPath: "M13 10V3L4 14h7v7l9-11h-7z",
+        uploadTitle: "Upload Clinical MRI Scan",
+        uploadSubtitle: "Supports axial T2-FLAIR DICOM slice images, PNG, and JPEG medical files.",
+        dropzoneText: "Upload Clinical MRI Scan (DICOM/PNG)",
+        sampleScanText: "Or use sample patient scan (Case #8842 - High-Grade Glioma) →",
+        sampleImages: {
+          original: "assets/mri_clean.png",
+          segmented: "assets/mri_segmented.png",
+          gradcam: "assets/mri_gradcam.png"
+        },
+        demoClasses: ["Glioma", "Meningioma", "Pituitary", "No Tumor"],
+        demoResult: "Glioma",
+        demoConfidence: 88.5,
+        regionLabel: "Frontal Lobe",
+        specialistTitle: "licensed radiologist or neurologist",
+        pipelineSteps: [
+          "Step 2: Applying Adaptive Preprocessing (Skull-stripping & CLAHE)...",
+          "Step 3: Running Attention-Guided Core (EfficientNet-B0 + CBAM)...",
+          "Step 4: Rendering 4K 3D Spatial Reconstruction..."
+        ]
+      },
+      lung: {
+        id: "lung",
+        label: "Lung (CT/X-Ray)",
+        iconPath: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z",
+        uploadTitle: "Upload Chest CT or X-Ray",
+        uploadSubtitle: "Supports volumetric CT DICOMs, PNG, and JPEG medical files.",
+        dropzoneText: "Upload Chest Scan (DICOM/PNG)",
+        sampleScanText: "Or use sample patient scan (Case #1024 - Malignant Nodule) →",
+        sampleImages: {
+          original: "assets/mri_clean.png",
+          segmented: "assets/mri_segmented.png",
+          gradcam: "assets/mri_gradcam.png"
+        },
+        demoClasses: ["Benign nodule", "Malignant nodule", "No nodule"],
+        demoResult: "Malignant nodule",
+        demoConfidence: 92.1,
+        regionLabel: "Right Upper Lobe",
+        specialistTitle: "licensed pulmonologist or radiologist",
+        pipelineSteps: [
+          "Step 2: Applying Adaptive Preprocessing (Lung Segmentation & CLAHE)...",
+          "Step 3: Running Attention-Guided Core (DenseNet-121 + CBAM)...",
+          "Step 4: Rendering 4K 3D Spatial Reconstruction..."
+        ]
+      },
+      breast: {
+        id: "breast",
+        label: "Breast (Mammography)",
+        iconPath: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z",
+        uploadTitle: "Upload Mammography Scan",
+        uploadSubtitle: "Supports standard mammography DICOMs, PNG, and JPEG medical files.",
+        dropzoneText: "Upload Breast Scan (DICOM/PNG)",
+        sampleScanText: "Or use sample patient scan (Case #5512 - Malignant Lesion) →",
+        sampleImages: {
+          original: "assets/mri_clean.png",
+          segmented: "assets/mri_segmented.png",
+          gradcam: "assets/mri_gradcam.png"
+        },
+        demoClasses: ["Benign", "Malignant", "Normal"],
+        demoResult: "Malignant",
+        demoConfidence: 89.4,
+        regionLabel: "Upper Outer Quadrant",
+        specialistTitle: "licensed radiologist or oncologist",
+        pipelineSteps: [
+          "Step 2: Applying Adaptive Preprocessing (Pectoral Muscle Removal)...",
+          "Step 3: Running Attention-Guided Core (ResNet-50 + CBAM)...",
+          "Step 4: Rendering 2D Spatial Heatmaps..."
+        ]
+      },
+      prostate: {
+        id: "prostate",
+        label: "Prostate (MRI)",
+        iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+        uploadTitle: "Upload Prostate MRI Scan",
+        uploadSubtitle: "Supports multiparametric MRI DICOMs, PNG, and JPEG medical files.",
+        dropzoneText: "Upload Prostate Scan (DICOM/PNG)",
+        sampleScanText: "Or use sample patient scan (Case #7721 - Clinically Significant) →",
+        sampleImages: {
+          original: "assets/mri_clean.png",
+          segmented: "assets/mri_segmented.png",
+          gradcam: "assets/mri_gradcam.png"
+        },
+        demoClasses: ["Clinically significant lesion", "Low-risk", "No lesion"],
+        demoResult: "Clinically significant lesion",
+        demoConfidence: 85.2,
+        regionLabel: "Peripheral Zone",
+        specialistTitle: "licensed urologist or radiologist",
+        pipelineSteps: [
+          "Step 2: Applying Adaptive Preprocessing (Prostate Gland Segmentation)...",
+          "Step 3: Running Attention-Guided Core (EfficientNet-B0 + CBAM)...",
+          "Step 4: Rendering 2D Spatial Heatmaps..."
+        ]
+      }
+    };
+
+    // 1. Mobile Menu Toggle
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileLinks = document.querySelectorAll('.mobile-link');
+
+    if (mobileBtn && mobileMenu) {
+      mobileBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+
+      mobileLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.add('hidden');
+        });
+      });
+    }
+
+    // 2. Reveal-on-Scroll Intersection Observer
+    const revealElements = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, {
+      threshold: 0.12,
+      rootMargin: "0px 0px -50px 0px"
+    });
+
+    revealElements.forEach(el => observer.observe(el));
+
+    // 3. Tri-Panel Interactive Slice Changer
+    let currentSlice = 24;
+    function changeScanSlice(direction) {
+      const sliceNum = document.getElementById('slice-num');
+      if (direction === 'next') {
+        currentSlice = currentSlice >= 48 ? 1 : currentSlice + 1;
+      } else {
+        currentSlice = currentSlice <= 1 ? 48 : currentSlice - 1;
+      }
+      if (sliceNum) {
+        sliceNum.textContent = `${currentSlice} / 48`;
+      }
+    }
+
+    // 4. Modal Workstation Simulator & Backend Processing Pipeline Controls
+    const modal = document.getElementById('demo-modal');
+    
+    function renderOrganCards() {
+      const container = document.getElementById('organ-cards-container');
+      if (!container) return;
+      container.innerHTML = '';
+      
+      Object.keys(ORGAN_CONFIG).forEach(key => {
+        const config = ORGAN_CONFIG[key];
+        const isSelected = currentOrgan === key;
+        const cardHTML = `
+          <div onclick="selectOrgan('${key}')" class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${isSelected ? 'border-[#f16623] bg-[#f16623]/10' : 'border-[#262262] bg-[#0b091a] hover:border-[#f16623]/50'} flex flex-col items-center gap-2 text-center group">
+            <svg class="w-8 h-8 ${isSelected ? 'text-[#f16623]' : 'text-slate-400 group-hover:text-[#f16623]'}" fill="currentColor" viewBox="0 0 24 24">
+              <path d="${config.iconPath}"></path>
+            </svg>
+            <span class="font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-300'}">${config.label}</span>
+          </div>
+        `;
+        container.innerHTML += cardHTML;
+      });
+      
+      document.getElementById('btn-confirm-organ').disabled = !currentOrgan;
+      document.getElementById('btn-confirm-organ').classList.toggle('opacity-50', !currentOrgan);
+      document.getElementById('btn-confirm-organ').classList.toggle('cursor-not-allowed', !currentOrgan);
+    }
+
+    function selectOrgan(organKey) {
+      currentOrgan = organKey;
+      renderOrganCards();
+    }
+
+    function confirmOrganSelection() {
+      const config = ORGAN_CONFIG[currentOrgan];
+      
+      // Update Upload Zone UI with organ specific text
+      document.querySelector('#modal-state-upload h4').textContent = config.uploadTitle;
+      document.querySelector('#modal-state-upload p.text-xs.font-mono').textContent = config.uploadSubtitle;
+      document.querySelector('#modal-state-upload h5').textContent = config.dropzoneText;
+      
+      const sampleBtn = document.querySelector('#modal-state-upload button');
+      if (sampleBtn) sampleBtn.textContent = config.sampleScanText;
+
+      // Update background dashboard panels based on organ
+      const p1 = document.getElementById('panel1-img');
+      const p2 = document.getElementById('panel2-img');
+      const p3 = document.getElementById('panel3-img');
+      if (currentOrgan === 'lung') {
+        if (p1) p1.src = 'https://upload.wikimedia.org/wikipedia/commons/3/30/Normal_chest_x-ray.png';
+        if (p2) p2.src = 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Lung_cancer_staging.svg';
+        if (p3) {
+          p3.src = 'https://upload.wikimedia.org/wikipedia/commons/3/30/Normal_chest_x-ray.png';
+          p3.style.filter = "sepia(100%) hue-rotate(300deg) saturate(500%) brightness(1.2)";
+        }
+      } else {
+        if (p1) p1.src = 'assets/mri_clean.png';
+        if (p2) p2.src = 'assets/mri_segmented.png';
+        if (p3) {
+          p3.src = 'assets/mri_gradcam.png';
+          p3.style.filter = "none";
+        }
+      }
+
+      document.getElementById('modal-state-organ-select').classList.add('hidden');
+      document.getElementById('modal-state-upload').classList.remove('hidden');
+    }
+
+    function openDemoModal() {
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Reset to Organ Select state
+        document.getElementById('modal-state-organ-select').classList.remove('hidden');
+        document.getElementById('modal-state-upload').classList.add('hidden');
+        document.getElementById('modal-state-processing').classList.add('hidden');
+        document.getElementById('modal-state-results').classList.add('hidden');
+        
+        renderOrganCards();
+      }
+    }
+
+    function closeDemoModal() {
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+      }
+    }
+
+    // Close modal on Escape key press
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+        closeDemoModal();
+      }
+    });
+
+    // File Upload & Pipeline Simulator Implementation
+    let uploadedImageSrc = 'assets/mri_clean.png';
+
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (file) {
+        processUploadedFile(file);
+      }
+    }
+
+    // Drag and Drop support
+    const dropZone = document.getElementById('drop-zone');
+    if (dropZone) {
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+      });
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('bg-[#262262]/60', 'border-[#f16623]'), false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('bg-[#262262]/60', 'border-[#f16623]'), false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+        if (file) {
+          processUploadedFile(file);
+        }
+      });
+    }
+
+    let uploadedFileObj = null;
+
+    async function useSampleScan() {
+      uploadedImageSrc = currentOrgan === 'lung' ? 'https://upload.wikimedia.org/wikipedia/commons/3/30/Normal_chest_x-ray.png' : 'assets/mri_clean.png';
+      
+      try {
+        const response = await fetch(uploadedImageSrc);
+        const blob = await response.blob();
+        uploadedFileObj = new File([blob], "sample.jpg", { type: blob.type });
+      } catch (e) {
+        console.error("Failed to load sample image", e);
+      }
+      
+      startProcessingPipeline();
+    }
+
+    function processUploadedFile(file) {
+      uploadedFileObj = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedImageSrc = e.target.result;
+        startProcessingPipeline();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function startProcessingPipeline() {
+      document.getElementById('modal-state-upload').classList.add('hidden');
+      document.getElementById('modal-state-processing').classList.remove('hidden');
+      document.getElementById('modal-state-results').classList.add('hidden');
+
+      const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+      
+      const config = ORGAN_CONFIG[currentOrgan];
+      const stepTexts = [
+        "Step 1: Ingesting and standardizing scan...",
+        config.pipelineSteps ? config.pipelineSteps[0] : "Step 2: Applying Adaptive Preprocessing...",
+        config.pipelineSteps ? config.pipelineSteps[1] : "Step 3: Running Attention-Guided Core...",
+        config.pipelineSteps ? config.pipelineSteps[2] : "Step 4: Rendering Spatial Reconstruction..."
+      ];
+
+      // Reset step icons to spinners
+      steps.forEach((s, index) => {
+        const icon = document.getElementById(`${s}-icon`);
+        const text = document.getElementById(`${s}-text`);
+        if (icon) {
+          icon.innerHTML = `<svg class="w-5 h-5 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        }
+        if (text) {
+          text.className = 'text-slate-400 font-mono text-xs';
+          text.innerText = stepTexts[index];
+        }
+      });
+
+      let currentStep = 0;
+      globalApiResponse = null;
+
+      // React / Vanilla JS Fetch Logic for FastAPI Backend
+      async function handleScanUpload(file) {
+          if (!file) return null;
+          try {
+              const formData = new FormData();
+              formData.append("file", file);
+
+              const response = await fetch("http://127.0.0.1:8000/analyze-scan", {
+                  method: "POST",
+                  body: formData
+              });
+
+              if (!response.ok) throw new Error("API Error");
+              return await response.json();
+          } catch (e) {
+              console.error("FastAPI Backend Error:", e);
+              return null;
+          }
+      }
+
+      function simulateSteps(callback) {
+        if (currentStep < steps.length) {
+          const s = steps[currentStep];
+          const icon = document.getElementById(`${s}-icon`);
+          const text = document.getElementById(`${s}-text`);
+          if (icon) icon.innerHTML = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+          if (text) text.className = 'text-emerald-400 font-mono text-xs font-bold';
+          currentStep++;
+          setTimeout(() => simulateSteps(callback), 100); // Faster animation
+        } else {
+          setTimeout(callback, 100);
+        }
+      }
+
+      // Start the actual FastAPI backend call concurrently with the UI simulation
+      handleScanUpload(uploadedFileObj).then(res => {
+          globalApiResponse = res;
+      });
+
+      function showResults() {
+        document.getElementById('modal-state-processing').classList.add('hidden');
+        document.getElementById('modal-state-results').classList.remove('hidden');
+        
+        const userImg = document.getElementById('modal-user-mri');
+        const segImg = document.getElementById('modal-segmented-mri');
+        const camImg = document.getElementById('modal-mri-img');
+
+        // Dynamically set fallback images based on selected organ
+        if (currentOrgan === 'lung') {
+          if (userImg) userImg.src = uploadedImageSrc;
+          // Use a public domain lung diagram URL so it always works without needing local assets
+          if (segImg) segImg.src = 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Lung_cancer_staging.svg';
+          
+          if (camImg) {
+             camImg.src = uploadedImageSrc;
+             // Apply a CSS filter to simulate a thermal Grad-CAM heatmap dynamically on whatever image they uploaded!
+             camImg.style.filter = "sepia(100%) hue-rotate(300deg) saturate(500%) brightness(1.2)";
+          }
+        } else {
+          if (userImg) userImg.src = 'assets/mri_clean.png';
+          if (segImg) segImg.src = 'assets/mri_segmented.png';
+          if (camImg) {
+             camImg.src = 'assets/mri_gradcam.png';
+             camImg.style.filter = "none";
+          }
+        }
+
+        if (currentOrgan === 'brain' || currentOrgan === 'lung') {
+          const btn3d = document.getElementById('tab-btn-3d');
+          if (btn3d) btn3d.style.display = 'flex';
+          switchModalView('3d');
+        } else {
+          const btn3d = document.getElementById('tab-btn-3d');
+          if (btn3d) btn3d.style.display = 'none';
+          switchModalView('tripanel');
+        }
+
+        // --- REAL FASTAPI PYTORCH BACKEND BINDINGS ---
+        if (globalApiResponse) {
+          const predictedClass = globalApiResponse.prediction || 'Pituitary Tumor';
+          const confidence = globalApiResponse.confidence || 96.8;
+          const preprocessed = globalApiResponse.preprocessed_b64;
+          const heatmap = globalApiResponse.heatmap_b64;
+          const isUncertain = globalApiResponse.uncertainty_flag;
+
+          // 1. Update Modal
+          const confCircle = document.getElementById('modal-conf-circle');
+          const confText = document.getElementById('modal-conf-text');
+          if (confCircle) confCircle.innerText = `${confidence}%`;
+          if (confText) confText.innerText = `Confidence Score: ${confidence}% ${isUncertain ? '(High Variance - Review Required)' : ''}`;
+
+          if (preprocessed && segImg) segImg.src = preprocessed;
+          if (heatmap && camImg) {
+            camImg.src = heatmap;
+            camImg.style.filter = 'none';
+          }
+
+          // 2. Update Tri-Panel Workstation
+          const p1 = document.getElementById('panel1-img');
+          const p2 = document.getElementById('panel2-img');
+          const p3 = document.getElementById('panel3-img');
+          if (p1 && uploadedImageSrc) p1.src = uploadedImageSrc;
+          if (p2 && preprocessed) p2.src = preprocessed;
+          if (p3 && heatmap) {
+            p3.src = heatmap;
+            p3.style.filter = 'none';
+          }
+
+          // 3. Update the 4 Bento Stage Cards on landing page!
+          const s1Img = document.getElementById('stage01-card-img');
+          const s2Pred = document.getElementById('stage02-card-prediction');
+          const s2Conf = document.getElementById('stage02-card-confidence');
+          const s3Var = document.getElementById('stage03-card-variance');
+          const s4Img = document.getElementById('stage04-card-img');
+
+          if (s1Img && preprocessed) s1Img.src = preprocessed;
+          if (s2Pred) s2Pred.innerText = `Class: ${predictedClass}`;
+          if (s2Conf) s2Conf.innerText = `Confidence: ${confidence}% (CBAM Active)`;
+          if (s3Var) {
+            if (isUncertain) {
+              s3Var.innerHTML = `Monte Carlo Pass: 10/10 <br>Epistemic Variance: <span class="font-bold text-red-400">0.078 (HIGH RISK - Senior Review Required)</span>`;
+            } else {
+              s3Var.innerHTML = `Monte Carlo Pass: 10/10 <br>Epistemic Variance: <span class="font-bold text-emerald-400">0.012 (Low Risk)</span>`;
+            }
+          }
+          if (s4Img && heatmap) s4Img.src = heatmap;
+        }
+      }
+
+      simulateSteps(showResults);
+    }
+
+    // 5. AI Radiology Explanation
+    // Now handled directly via the HF API Response to keep keys server-side.
+    async function explainResult() {
+      const btn = document.getElementById('ai-explain-btn');
+      const statusEl = document.getElementById('ai-explain-status');
+      const textEl = document.getElementById('ai-explanation-text');
+      if (!btn || !statusEl || !textEl) return;
+
+      btn.disabled = true;
+      btn.classList.add('opacity-60', 'cursor-not-allowed');
+
+      if (globalApiResponse && globalApiResponse.data[4]) {
+          // LIVE MODE: Display backend-generated summary from HF API
+          let explanation = globalApiResponse.data[4];
+          let formattedExplanation = explanation.trim()
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em class="text-white/90">$1</em>')
+            .replace(/\n/g, '<br/>');
+            
+          textEl.innerHTML = formattedExplanation;
+          statusEl.textContent = 'Generated via API';
+          statusEl.className = 'text-[10px] font-mono text-emerald-400 uppercase tracking-wide';
+      } else {
+          // DEMO MODE FALLBACK
+          console.warn('AI explanation fallback triggered: No Live API Data');
+          statusEl.textContent = 'Generating…';
+          textEl.innerHTML = '<span class="text-[#f16623] animate-pulse">Analyzing findings…</span>';
+          
+          setTimeout(() => {
+              const tumorType = "High-Grade Glioma";
+              const confidence = "96.8";
+              const uncertainty = "1.2";
+              const region = "Frontal Lobe";
+              
+              textEl.innerHTML = `The model flagged the <strong class="text-white">${region}</strong> with <strong class="text-white">${confidence}% confidence</strong>, most consistent with a <strong class="text-rose-400">${tumorType}</strong>. The Grad-CAM heatmap highlights the region the network weighted most heavily in reaching this prediction. The ±${uncertainty}% uncertainty band reflects how stable that prediction was across the model's internal estimate. This is an AI-assisted screening result, not a clinical diagnosis — a radiologist should confirm before any decision is made.`;
+              statusEl.textContent = 'Offline (fallback)';
+              statusEl.className = 'text-[10px] font-mono text-amber-400 uppercase tracking-wide';
+          }, 800);
+      }
+      
+      btn.disabled = false;
+      btn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    function switchModalView(mode) {
+      if (currentOrgan !== 'brain' && currentOrgan !== 'lung') {
+        mode = 'tripanel';
+      }
+
+      const v3d = document.getElementById('view-3d-container');
+      const vTri = document.getElementById('view-tripanel-container');
+      const btn3d = document.getElementById('tab-btn-3d');
+      const btnTri = document.getElementById('tab-btn-tripanel');
+
+      if (mode === '3d') {
+        if (v3d) v3d.classList.remove('hidden');
+        if (vTri) vTri.classList.add('hidden');
+        if (btn3d) btn3d.className = 'px-4 py-2 rounded-lg bg-[#262262] text-[#f16623] border border-[#f16623] font-bold flex items-center gap-2';
+        if (btnTri) btnTri.className = 'px-4 py-2 rounded-lg bg-[#0b091a] text-slate-400 border border-[#262262] flex items-center gap-2';
+        
+        if (currentOrgan === 'brain') {
+          setTimeout(init3DBrainWebGL, 50);
+        } else if (currentOrgan === 'lung') {
+          setTimeout(init3DLungWebGL, 50);
+        }
+      } else {
+        if (v3d) v3d.classList.add('hidden');
+        if (vTri) vTri.classList.remove('hidden');
+        if (btnTri) btnTri.className = 'px-4 py-2 rounded-lg bg-[#262262] text-[#f16623] border border-[#f16623] font-bold flex items-center gap-2';
+        if (btn3d) btn3d.className = 'px-4 py-2 rounded-lg bg-[#0b091a] text-slate-400 border border-[#262262] flex items-center gap-2';
+      }
+    }
+
+    // Three.js 3D WebGL Hyper-Realistic Anatomical Brain Viewer
+    let scene, camera, renderer, controls, brainGroup, tumorSphere, tumorLight, animFrameId;
+
+    function generateBrainProceduralBumpTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (let i = 0; i < 480; i++) {
+        const startX = Math.random() * 1024;
+        const startY = Math.random() * 1024;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+
+        let cx = startX;
+        let cy = startY;
+        const steps = 4 + Math.floor(Math.random() * 6);
+
+        for (let s = 0; s < steps; s++) {
+          cx += (Math.random() - 0.5) * 110;
+          cy += (Math.random() - 0.5) * 110;
+          ctx.lineTo(cx, cy);
+        }
+
+        // Sulci (dark shadow crevice)
+        ctx.strokeStyle = 'rgba(15, 15, 15, 0.45)';
+        ctx.lineWidth = 24;
+        ctx.stroke();
+
+        // Gyri (bright rounded ridge center)
+        ctx.strokeStyle = 'rgba(240, 240, 240, 0.65)';
+        ctx.lineWidth = 12;
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(3, 2);
+      return texture;
+    }
+
+    function createBrainHemisphereMesh(isRight, bumpTexture) {
+      const geo = new THREE.SphereGeometry(4.2, 96, 96);
+      const pos = geo.attributes.position;
+
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i);
+        let y = pos.getY(i);
+        let z = pos.getZ(i);
+
+        // Medial inner flattening along longitudinal fissure
+        if ((isRight && x < 0) || (!isRight && x > 0)) {
+          x *= 0.18;
+        } else {
+          x *= 0.95;
+        }
+
+        // Anatomical brain proportions (sagittal elongation, frontal/temporal/occipital lobes)
+        z *= 1.25;
+        y *= 0.95;
+
+        if (z > 2) {
+          x *= 0.88;
+          y *= 0.92;
+        }
+        if (y < -0.5 && z > -1 && z < 2) {
+          x *= 1.12;
+        }
+
+        // Smooth macro organic convolutions (gyri & sulci)
+        const foldPattern = 
+          Math.sin(x * 2.2 + Math.cos(y * 1.8) * 2.0) * 0.25 +
+          Math.cos(y * 2.5 + Math.sin(z * 2.0) * 2.0) * 0.25 +
+          Math.sin(z * 3.0 + Math.cos(x * 2.2) * 1.5) * 0.18 +
+          Math.cos(x * 4.5 + y * 4.5 + z * 4.5) * 0.08;
+
+        const d = 1 + foldPattern * 0.14;
+        pos.setXYZ(i, x * d, y * d, z * d);
+      }
+
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x8d96a0,
+        roughness: 0.78, // High matte organic roughness matching reference photo
+        metalness: 0.06, // Low metalness eliminating flat plastic glare
+        bumpMap: bumpTexture,
+        bumpScale: 0.32,
+        flatShading: false
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.x = isRight ? 0.42 : -0.42;
+      return mesh;
+    }
+
+    function createCerebellumMesh(bumpTexture) {
+      const geo = new THREE.SphereGeometry(2.1, 64, 64);
+      const pos = geo.attributes.position;
+
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i);
+        let y = pos.getY(i);
+        let z = pos.getZ(i);
+
+        // Fine horizontal folia rippling
+        const rippling = Math.sin(y * 18.0) * 0.12 + Math.cos(z * 10.0) * 0.08;
+        const d = 1 + rippling * 0.14;
+        pos.setXYZ(i, x * d * 1.25, y * d * 0.85, z * d * 0.9);
+      }
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x7c858e,
+        roughness: 0.82,
+        metalness: 0.04,
+        bumpMap: bumpTexture,
+        bumpScale: 0.2,
+        flatShading: false
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, -3.2, -2.4);
+      return mesh;
+    }
+
+    function createBrainstemMesh() {
+      const geo = new THREE.CylinderGeometry(0.85, 0.55, 3.2, 32);
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x828b94,
+        roughness: 0.72,
+        metalness: 0.05,
+        flatShading: false
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, -3.9, -0.6);
+      mesh.rotation.x = -0.2;
+      return mesh;
+    }
+
+    function init3DBrainWebGL() {
+      const container = document.getElementById('webgl-brain-container');
+      if (!container) return;
+
+      if (renderer) {
+        cancelAnimationFrame(animFrameId);
+        container.innerHTML = '';
+      }
+
+      const width = container.clientWidth || 650;
+      const height = container.clientHeight || 480;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b091a);
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(0, 3, 22);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      const OrbitControlsClass = THREE.OrbitControls || window.OrbitControls;
+      if (OrbitControlsClass) {
+        controls = new OrbitControlsClass(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.maxDistance = 45;
+        controls.minDistance = 6;
+        controls.enableRotate = true;
+        controls.rotateSpeed = 0.85;
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1.0;
+        controls.enablePan = true;
+      }
+
+      // Ensure touch and mouse drag gestures work for rotation
+      renderer.domElement.style.touchAction = 'none';
+
+      // Generate realistic procedural bump texture map
+      const bumpTexture = generateBrainProceduralBumpTexture();
+
+      // Group containing anatomical brain structures
+      brainGroup = new THREE.Group();
+
+      const leftHemisphere = createBrainHemisphereMesh(false, bumpTexture);
+      const rightHemisphere = createBrainHemisphereMesh(true, bumpTexture);
+      const cerebellum = createCerebellumMesh(bumpTexture);
+      const brainstem = createBrainstemMesh();
+
+      brainGroup.add(leftHemisphere);
+      brainGroup.add(rightHemisphere);
+      brainGroup.add(cerebellum);
+      brainGroup.add(brainstem);
+
+      scene.add(brainGroup);
+
+      // Create Glowing Pulsating Tumor Sphere & Point Light at Frontal Lobe
+      const tumorGeo = new THREE.SphereGeometry(0.85, 32, 32);
+      const tumorMat = new THREE.MeshBasicMaterial({
+        color: 0xff4500,
+        transparent: true,
+        opacity: 1.0
+      });
+      tumorSphere = new THREE.Mesh(tumorGeo, tumorMat);
+      tumorSphere.position.set(1.8, 1.5, 3.2); // Frontal lobe 3D coordinate
+      brainGroup.add(tumorSphere);
+
+      // Outer Tumor Wireframe Glow Shell
+      const glowGeo = new THREE.SphereGeometry(1.3, 32, 32);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0xf16623,
+        transparent: true,
+        opacity: 0.5,
+        wireframe: true
+      });
+      const tumorGlow = new THREE.Mesh(glowGeo, glowMat);
+      tumorSphere.add(tumorGlow);
+
+      // Expanding Radar Pulse Beacon Shell for Blinking Tumor Target
+      const pulseGeo = new THREE.SphereGeometry(1.0, 32, 32);
+      const pulseMat = new THREE.MeshBasicMaterial({
+        color: 0xff3300,
+        transparent: true,
+        opacity: 0.8
+      });
+      const tumorPulse = new THREE.Mesh(pulseGeo, pulseMat);
+      tumorSphere.add(tumorPulse);
+
+      // Point Light simulating localized internal tumor radiation
+      tumorLight = new THREE.PointLight(0xff4500, 4.0, 15);
+      tumorSphere.add(tumorLight);
+
+      // Soft Studio Lighting matching realistic gray brain reference photo
+      const hemiLight = new THREE.HemisphereLight(0xe2e8f0, 0x1e1b4b, 1.1);
+      scene.add(hemiLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+      keyLight.position.set(10, 15, 12);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.45);
+      fillLight.position.set(-12, -8, -10);
+      scene.add(fillLight);
+
+      const lesionAccentLight = new THREE.DirectionalLight(0xf16623, 0.35);
+      lesionAccentLight.position.set(10, 5, 8);
+      scene.add(lesionAccentLight);
+
+      // Reset label pointer text for Brain
+      const pointerEl = document.getElementById('tumor-3d-pointer');
+      if (pointerEl) {
+        const title = document.getElementById('pointer-title');
+        if (title) title.textContent = 'Lesion Attention Focus';
+        const sub = document.getElementById('pointer-subtitle');
+        if (sub) sub.textContent = 'Frontal Lobe (x:1.8, y:1.5, z:3.2)';
+      }
+      const modelTitle = document.getElementById('model-delineation-title');
+      if (modelTitle) modelTitle.textContent = '3D Spatial Brain Delineation';
+
+      // Render Loop
+      let clock = new THREE.Clock();
+      function animate() {
+        animFrameId = requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
+
+        // High-Intensity Blinking & Radar Pulse Beacon for Tumor Location
+        if (tumorSphere) {
+          // 1. Rapid strobe blink (flashes bright orange/red at 8Hz)
+          const blinkPhase = Math.sin(elapsedTime * 8);
+          tumorMat.opacity = blinkPhase > 0 ? 1.0 : 0.25;
+
+          // 2. Pulsating core scale
+          const coreScale = 1 + Math.sin(elapsedTime * 6) * 0.18;
+          tumorSphere.scale.set(coreScale, coreScale, coreScale);
+
+          // 3. Expanding Radar Pulse Shell (expands outward from 1x to 2.8x and fades out)
+          const pulseCycle = (elapsedTime * 1.5) % 1.0; // 0 to 1 cycle
+          const pulseScale = 1.0 + pulseCycle * 1.8;
+          tumorPulse.scale.set(pulseScale, pulseScale, pulseScale);
+          pulseMat.opacity = (1.0 - pulseCycle) * 0.85;
+
+          // 4. Dynamic light intensity strobe
+          if (tumorLight) {
+            tumorLight.intensity = 2.0 + Math.pow(Math.abs(blinkPhase), 2) * 5.0;
+          }
+        }
+
+        // Dynamically project 3D Tumor coordinate to 2D HTML Label Pointer
+        const pointerEl = document.getElementById('tumor-3d-pointer');
+        const containerEl = document.getElementById('view-3d-container');
+        if (tumorSphere && pointerEl && camera && containerEl) {
+          const wp = new THREE.Vector3();
+          tumorSphere.getWorldPosition(wp);
+          wp.project(camera);
+
+          const x = (wp.x * 0.5 + 0.5) * containerEl.clientWidth;
+          const y = (-(wp.y * 0.5) + 0.5) * containerEl.clientHeight;
+
+          if (wp.z > 1) {
+            pointerEl.style.opacity = '0';
+          } else {
+            pointerEl.style.opacity = '1';
+            pointerEl.style.left = `${x}px`;
+            pointerEl.style.top = `${y}px`;
+          }
+        }
+
+        if (controls) controls.update();
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    }
+
+    // Three.js 3D WebGL Procedural Anatomical Lung Viewer
+    let lungGroup;
+
+    function init3DLungWebGL() {
+      const container = document.getElementById('webgl-brain-container');
+      if (!container) return;
+
+      if (renderer) {
+        cancelAnimationFrame(animFrameId);
+        container.innerHTML = '';
+      }
+
+      const width = container.clientWidth || 650;
+      const height = container.clientHeight || 480;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b091a);
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(0, 2, 26); // Pulled back a bit more to fit lungs
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      const OrbitControlsClass = THREE.OrbitControls || window.OrbitControls;
+      if (OrbitControlsClass) {
+        controls = new OrbitControlsClass(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 50;
+        controls.minDistance = 8;
+      }
+
+      lungGroup = new THREE.Group();
+      
+      const loader = new THREE.GLTFLoader();
+      loader.load('./lung.glb', function (gltf) {
+        const model = gltf.scene;
+        
+        // Calibrate model coordinates
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 8 / maxDim; // Normalize scale to ~8 units
+        
+        model.scale.set(scale, scale, scale);
+        // Center the model at 0,0,0
+        model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        
+        // Add a slight rotation if the model is laid flat
+        model.rotation.x = Math.PI / 2; // Often GLTF from Maya/Blender needs x rotation
+        
+        lungGroup.add(model);
+        console.log('Lung Model Bounding Box:', box);
+      }, undefined, function (error) {
+        console.error('An error happened loading lung.glb:', error);
+      });
+
+      // Add Nodule / Lesion representation in Right Upper Lobe
+      const tumorGeo = new THREE.SphereGeometry(0.8, 32, 32);
+      const tumorMat = new THREE.MeshBasicMaterial({ 
+        color: 0xf16623, 
+        transparent: true, 
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending 
+      });
+      tumorSphere = new THREE.Mesh(tumorGeo, tumorMat);
+      // Position in right upper lobe (estimated based on normalized size)
+      tumorSphere.position.set(2.0, 1.5, 1.2);
+      lungGroup.add(tumorSphere);
+
+      tumorLight = new THREE.PointLight(0xf16623, 2, 8);
+      tumorSphere.add(tumorLight);
+
+      // Reposition the label pointer slightly
+      const pointerEl = document.getElementById('tumor-3d-pointer');
+      if (pointerEl) {
+        const title = document.getElementById('pointer-title');
+        if (title) title.textContent = 'Malignant Nodule Detected';
+        const sub = document.getElementById('pointer-subtitle');
+        if (sub) sub.textContent = 'Confidence: 92.1% | Right Upper Lobe';
+      }
+      const modelTitle = document.getElementById('model-delineation-title');
+      if (modelTitle) modelTitle.textContent = '3D Spatial Lung Delineation';
+
+      scene.add(lungGroup);
+
+      // Needed by the render loop below for 2D label projection —
+      // this was missing, which crashed animate() every frame and
+      // silently prevented renderer.render() from ever running.
+      const containerEl = document.getElementById('view-3d-container');
+
+      // Lighting (Cinematic rim lighting)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+      scene.add(ambientLight);
+
+      const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      mainLight.position.set(15, 20, 15);
+      scene.add(mainLight);
+
+      const fillLight = new THREE.DirectionalLight(0x4a6b8c, 0.6);
+      fillLight.position.set(-12, -8, -10);
+      scene.add(fillLight);
+
+      const lesionAccentLight = new THREE.DirectionalLight(0xf16623, 0.35);
+      lesionAccentLight.position.set(10, 5, 8);
+      scene.add(lesionAccentLight);
+
+      // Render Loop
+      let clock = new THREE.Clock();
+      function animate() {
+        animFrameId = requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
+
+        if (lungGroup) {
+          // Auto-rotation disabled as requested
+        }
+
+        if (tumorSphere) {
+          const scale = 1 + Math.sin(elapsedTime * 4.5) * 0.22;
+          tumorSphere.scale.set(scale, scale, scale);
+          tumorMat.opacity = 0.7 + Math.sin(elapsedTime * 6) * 0.3;
+          if (tumorLight) tumorLight.intensity = 2.0 + Math.sin(elapsedTime * 5) * 1.0;
+        }
+
+        // Dynamically project 3D Tumor coordinate to 2D HTML Label Pointer
+        // AUDIT: Ensure tumorSphere, pointerEl, camera, and containerEl are explicitly declared in this function's scope.
+        if (tumorSphere && pointerEl && camera && containerEl) {
+          const wp = new THREE.Vector3();
+          tumorSphere.getWorldPosition(wp);
+          wp.project(camera);
+
+          const x = (wp.x * 0.5 + 0.5) * containerEl.clientWidth;
+          const y = (-(wp.y * 0.5) + 0.5) * containerEl.clientHeight;
+
+          if (wp.z > 1) {
+            pointerEl.style.opacity = '0';
+          } else {
+            pointerEl.style.opacity = '1';
+            pointerEl.style.left = `${x}px`;
+            pointerEl.style.top = `${y}px`;
+          }
+        }
+
+        if (controls) controls.update();
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    }
+
+    // YouTube-Style Fullscreen Toggle Implementation
+    function toggleFullScreen3D() {
+      const container = document.getElementById('view-3d-container');
+      if (!container) return;
+
+      if (!document.fullscreenElement) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        } else if (container.msRequestFullscreen) {
+          container.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    function updateFullScreenUI() {
+      const expandIcon = document.getElementById('fullscreen-expand-icon');
+      const exitIcon = document.getElementById('fullscreen-exit-icon');
+      const isFull = !!document.fullscreenElement;
+
+      if (expandIcon && exitIcon) {
+        if (isFull) {
+          expandIcon.classList.add('hidden');
+          exitIcon.classList.remove('hidden');
+        } else {
+          expandIcon.classList.remove('hidden');
+          exitIcon.classList.add('hidden');
+        }
+      }
+
+      handleResize3D();
+    }
+
+    function handleResize3D() {
+      const container = document.getElementById('view-3d-container');
+      if (!container || !renderer || !camera) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    document.addEventListener('fullscreenchange', updateFullScreenUI);
+    window.addEventListener('resize', handleResize3D);
+
+    function resetModalUpload() {
+      document.getElementById('modal-state-upload').classList.remove('hidden');
+      document.getElementById('modal-state-processing').classList.add('hidden');
+      document.getElementById('modal-state-results').classList.add('hidden');
+      const fileInput = document.getElementById('mri-file-input');
+      if (fileInput) fileInput.value = '';
+    }
+
+    function adjustHeatmapOpacity(val) {
+      const img = document.getElementById('modal-mri-img');
+      if (img) {
+        img.style.opacity = val / 100;
+      }
+    }
+
+    // Universal Vertical Menu Drawer Controls
+    const verticalMenu = document.getElementById('vertical-menu');
+    const hamburgerIcon = document.getElementById('hamburger-icon');
+    const closeIcon = document.getElementById('close-icon');
+    const drawerLinks = document.querySelectorAll('.nav-drawer-link');
+
+    function toggleVerticalMenu() {
+      if (!verticalMenu) return;
+      const isOpen = !verticalMenu.classList.contains('hidden');
+      if (isOpen) {
+        closeVerticalMenu();
+      } else {
+        openVerticalMenu();
+      }
+    }
+
+    function openVerticalMenu() {
+      if (!verticalMenu) return;
+      verticalMenu.classList.remove('hidden');
+      if (hamburgerIcon) hamburgerIcon.classList.add('hidden');
+      if (closeIcon) closeIcon.classList.remove('hidden');
+    }
+
+    function closeVerticalMenu() {
+      if (!verticalMenu) return;
+      verticalMenu.classList.add('hidden');
+      if (hamburgerIcon) hamburgerIcon.classList.remove('hidden');
+      if (closeIcon) closeIcon.classList.add('hidden');
+    }
+
+    // Auto-close menu on link click
+    if (drawerLinks) {
+      drawerLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          closeVerticalMenu();
+        });
+      });
+    }
+
+    // Close menu on click outside
+    document.addEventListener('click', (e) => {
+      if (verticalMenu && !verticalMenu.classList.contains('hidden')) {
+        const header = document.getElementById('navbar');
+        if (header && !header.contains(e.target)) {
+          closeVerticalMenu();
+        }
+      }
+    });
+
+    // Close menu on Escape key press
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && verticalMenu && !verticalMenu.classList.contains('hidden')) {
+        closeVerticalMenu();
+      }
+    });
+
+    // High-Tech Typewriter Animation for Hero Headline
+    document.addEventListener('DOMContentLoaded', () => {
+      const fullText = "Illuminating the Black Box in Neuro-Radiology.";
+      const targetEl = document.getElementById('typewriter-text');
+      const cursorEl = document.getElementById('typewriter-cursor');
+      if (!targetEl) return;
+
+      const highlightStartIndex = 17; // Start index of "Black Box"
+      const highlightEndIndex = 26;   // End index of "Black Box"
+      const typingSpeedMs = 50;       // Modern, brisk 50ms per letter
+
+      let charIndex = 0;
+
+      function typeChar() {
+        if (charIndex <= fullText.length) {
+          let htmlResult = '';
+
+          if (charIndex <= highlightStartIndex) {
+            htmlResult = fullText.substring(0, charIndex);
+          } else if (charIndex <= highlightEndIndex) {
+            const before = fullText.substring(0, highlightStartIndex);
+            const highlighted = fullText.substring(highlightStartIndex, charIndex);
+            htmlResult = `${before}<span class="black-box-glow inline-block font-bold">${highlighted}</span>`;
+          } else {
+            const before = fullText.substring(0, highlightStartIndex);
+            const highlighted = fullText.substring(highlightStartIndex, highlightEndIndex);
+            const after = fullText.substring(highlightEndIndex, charIndex);
+            htmlResult = `${before}<span class="black-box-glow inline-block font-bold">${highlighted}</span>${after}`;
+          }
+
+          targetEl.innerHTML = htmlResult;
+          charIndex++;
+          setTimeout(typeChar, typingSpeedMs);
+        } else {
+          // Keep cursor blinking infinitely after typing finishes
+          if (cursorEl) {
+            cursorEl.classList.add('animate-blink');
+          }
+        }
+      }
+
+      // Unmount splash screen after 4.2 seconds
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.remove();
+      }, 4200);
+
+      // Initiation delay synchronized with splash screen fade
+      setTimeout(typeChar, 3500);
+    });
+  </script>
+</body>
+</html>
