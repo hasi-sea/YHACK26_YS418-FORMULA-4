@@ -4,3 +4,7 @@ backend/__pycache__/
 .DS_Store
 *.pyc
 .env
+temp_repo/
+test_*.js
+dup_test.js
+jsdom_test.js
